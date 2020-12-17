@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
+from operator import itemgetter
 
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
@@ -23,7 +24,6 @@ print(messages.head())
 
 # load categories dataset
 categories = pd.read_csv('data/categories.csv')
-
 print(categories.head())
 
 # merge datasets
@@ -76,13 +76,32 @@ print('shape after dropping duplicates', df.shape)
 # check number of duplicates
 print(df[df.duplicated()])
 
-engine = create_engine('sqlite:///df_etl.db')
-df.to_sql('df', engine, index=False)
 
-import sqlite3
+#drop table if exists
+dbpath = 'sqlite:///data/messages_categories.db'
+table = 'messages_categories'
+engine = create_engine(dbpath)
+connection = engine.raw_connection()
+cursor = connection.cursor()
+command = "DROP TABLE IF EXISTS {};".format(table)
+cursor.execute(command)
+connection.commit()
+cursor.close()
 
-conn = sqlite3.connect('df_etl.db')
+engine = create_engine(dbpath)
+df.to_sql(table, engine, index=False)
 
-df['id'] = df['id'].astype('int')
+categories_1 = list(df.columns[5:])
+categories_counts = list(df.iloc[:,5:].sum())
 
-print("print dataframe from database \n" , pd.read_sql('SELECT * FROM df', con = conn).head())
+top_count = sorted(zip(categories_counts, categories_1), reverse=True)
+#top_count = categories.nlargest(5,)
+
+first_tuple_elements = []
+
+for a_tuple in top_count:
+	first_tuple_elements.append(a_tuple[0])
+
+print(first_tuple_elements)
+
+print(type(top_count))
